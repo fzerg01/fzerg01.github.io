@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>簡易商品管理</title>
+
+  <!-- 引入 Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- 引入其他 JS 庫 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .product {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 10px;
+      display: inline-block;
+      width: 100%;
+    }
+    button {
+      margin-top: 10px;
+      padding: 5px 10px;
+    }
+    input[type="file"] {
+      padding: 5px;
+      margin-top: 10px;
+    }
+    .cart {
+      margin-top: 40px;
+    }
+    .cart ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .cart ul li {
+      padding: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center">📦 商品管理系統</h1>
+    
+    <!-- 上傳 Excel 檔案區塊 -->
+    <div class="row">
+      <div class="col-12">
+        <h2>📤 上傳商品 Excel</h2>
+        <input type="file" id="excel-file" accept=".xlsx, .xls">
+        <button onclick="loadExcel('file')" class="btn btn-primary">上傳新商品</button>
+      </div>
+    </div>
+<picture>
+            <source srcset="images/apple_banana_chocolate_large.jpg" media="(min-width: 768px)">
+            <source srcset="images/apple_banana_chocolate_medium.jpg" media="(min-width: 480px)">
+            <img src="images/apple_banana_chocolate_small.jpg" alt="蘋果香蕉巧克力">
+        </picture>
+    <!-- 商品展示區 -->
+    <div id="products" class="row">
+      <!-- 商品會動態生成在這裡 -->
+    </div>
+
+    <!-- 購物車區 -->
+    <div class="cart">
+      <h2>🛒 購物車</h2>
+      <ul id="cart-items"></ul>
+      <p><strong>總金額:</strong> $<span id="total">0.00</span></p>
+      <button onclick="exportToExcel()" class="btn btn-success">⬇️ 下載 Excel</button><br><br>
+
+      <input type="email" id="user-email" class="form-control" placeholder="請輸入您的 Email"><br>
+      <button onclick="sendEmail()" class="btn btn-info">📧 寄送購物清單</button>
+    </div>
+  </div>
+
+  <script>
+    emailjs.init("XMzj2U51edt0fLBjT"); // 替換為你的 EmailJS 使用者 ID
+    const cart = {};
+    
+    // 解析 Excel 資料的共用邏輯
+    function parseExcelData(json) {
+      return json.map((row, index) => ({
+        id: index + 1,
+        name: row["商品名稱"],
+        price: parseFloat(row["單價"])
+      }));
+    }
+
+    // 讀取本地或遠端的 Excel 檔案
+    function loadExcel(type) {
+      const handleFile = (data) => {
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet);
+        products = parseExcelData(json);
+        renderProducts(products);
+      };
+
+      if (type === 'file') {
+        const fileInput = document.getElementById('excel-file');
+        const file = fileInput.files[0];
+        if (!file) return alert("請選擇一個 Excel 檔案");
+
+        const reader = new FileReader();
+        reader.onload = (e) => handleFile(new Uint8Array(e.target.result));
+        reader.readAsArrayBuffer(file);
+      } else if (type === 'url') {
+        fetch('https://fzerg01.github.io/assets/database.xlsx')
+          .then(response => response.arrayBuffer())
+          .then(handleFile)
+          .catch(console.error);
+      }
+    }
+
+    function renderProducts(products) {
+      const container = document.getElementById("products");
+      container.innerHTML = "";
+      if (products.length === 0) {
+        container.innerHTML = "<p>目前無商品資料，請上傳 Excel。</p>";
+        return;
+      }
+
+      products.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "product col-12 col-sm-6 col-md-4 col-lg-3";
+        div.innerHTML = `
+          <h3>${p.name}</h3>
+          <p>價格: $${p.price.toFixed(2)}</p>
+          <button onclick="addToCart(${p.id})" class="btn btn-primary">加入購物車</button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function addToCart(id) {
+      const product = products.find(p => p.id === id);
+      if (cart[id]) {
+        cart[id].quantity += 1;
+      } else {
+        cart[id] = { ...product, quantity: 1 };
+      }
+      renderCart();
+    }
+
+    function renderCart() {
+      const ul = document.getElementById("cart-items");
+      const total = document.getElementById("total");
+      ul.innerHTML = "";
+      let sum = 0;
+      for (let id in cart) {
+        const item = cart[id];
+        const subtotal = item.price * item.quantity;
+        const li = document.createElement("li");
+        li.textContent = `${item.name} × ${item.quantity} = $${subtotal.toFixed(2)}`;
+        ul.appendChild(li);
+        sum += subtotal;
+      }
+      total.textContent = sum.toFixed(2);
+    }
+
+    function exportToExcel() {
+      const data = [];
+      let totalSum = 0;
+      for (let id in cart) {
+        const item = cart[id];
+        const subtotal = item.price * item.quantity;
+        totalSum += subtotal;
+        data.push({
+          商品名稱: item.name,
+          數量: item.quantity,
+          單價: item.price,
+          小計: subtotal
+        });
+      }
+      if (data.length === 0) {
+        alert("購物車是空的！");
+        return;
+      }
+      data.push({ 商品名稱: "總金額", 小計: totalSum });
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "購物清單");
+      XLSX.writeFile(wb, "購物清單.xlsx");
+    }
+
+    function sendEmail() {
+      const email = document.getElementById("user-email").value.trim();
+      if (!email) return alert("請輸入 Email！");
+      if (Object.keys(cart).length === 0) return alert("購物車是空的！");
+
+      let message = '';
+      let total = 0;
+
+      for (let id in cart) {
+        const item = cart[id];
+        const subtotal = item.price * item.quantity;
+        message += `${item.name} × ${item.quantity} = $${subtotal.toFixed(2)}\n`;
+        total += subtotal;
+      }
+      message += `\n總金額：$${total.toFixed(2)}`;
+
+      const templateParams = {
+        user_email: email,
+        message: message
+      };
+      emailjs.send("service_xxax3js", "template_bv65a8p", templateParams)
+        .then(res => alert("Email 已寄出！"), err => alert("寄送失敗：" + JSON.stringify(err)));
+    }
+
+    // 在頁面載入時自動讀取檔案
+    window.onload = function() {
+      loadExcel('url');  // 這裡設定成 'url' 可以從遠端檔案載入
+    };
+  </script>
+
+  <!-- 引入 Bootstrap JS 和其他需要的 JS 庫 -->
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

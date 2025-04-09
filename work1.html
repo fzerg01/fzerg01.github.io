@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bootstrap RWD 範例</title>
+    <!-- 引入 Bootstrap 的 CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* 自定義一些樣式 */
+        .hero-section {
+            background-color: #f8f9fa;
+            padding: 50px 0;
+            text-align: center;
+        }
+        .card {
+			width: 300px;  /* 固定寬度 */
+            margin-bottom: 30px;
+        }
+        .card-img-top {
+			width: 300px;  /* 固定寬度 */
+            height: 200px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 頁首區域 -->
+    <header class="hero-section">
+        <div class="container">
+            <h1 class="display-4">歡迎來到我的網站</h1>
+            <p class="lead">這是一個使用 Bootstrap 製作的響應式網頁範例。</p>
+        </div>
+    </header>
+
+    <!-- 主內容區域 -->
+    <main class="container my-5">
+        <div class="row">
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card">
+                    <img src=".\assets\Apple.jpg" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <h5 class="card-title">卡片 1</h5>
+                        <p class="card-text">這是卡片內容的簡短描述，提供一些基本資訊。</p>
+                        <a href="#" class="btn btn-primary">閱讀更多</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card">
+                    <img src=".\assets\Banana.jpg" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <h5 class="card-title">卡片 2</h5>
+                        <p class="card-text">這是另一個卡片內容，讓你了解更多的訊息。</p>
+                        <a href="#" class="btn btn-primary">閱讀更多</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card">
+                    <img src=".\assets\Chocolate.jpg" class="card-img-top" alt="...">
+                    <div class="card-body">
+                        <h5 class="card-title">卡片 3</h5>
+                        <p class="card-text">這個卡片提供一些有趣的內容，值得一看。</p>
+                        <a href="#" class="btn btn-primary">閱讀更多</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 頁尾區域 -->
+    <footer class="text-center py-4" style="background-color: #f8f9fa;">
+        <p>&copy; 2025 我的網站。所有權利保留。</p>
+    </footer>
+
+    <!-- 引入 Bootstrap 的 JS 和其他需要的 JS 庫 -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
