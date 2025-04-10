@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>會員登入</title>
+</head>
+<style>
+/* 警告視窗背景 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* 半透明背景 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* 視窗內容 */
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+/* 轉圈圈動畫 */
+.spinner {
+  border: 4px solid #f3f3f3; /* Light gray */
+  border-top: 4px solid #3498db; /* Blue color */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 2s linear infinite;
+  margin: 10px auto;
+}
+
+/* 轉圈圈動畫 */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
+<body>
+  <h2>會員登入</h2>
+  <form id="loginForm">
+    <label>Email: <input type="email" name="email" required></label><br><br>
+    <label>密碼: <input type="password" name="password" required></label><br><br>
+    <button type="submit">登入</button>
+  </form>
+
+  
+<!-- 警告視窗 -->
+<div id="modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="spinner"></div> <!-- 轉圈圈 -->
+    <p>正在處理中...</p>
+  </div>
+</div>
+
+  <div id="message"></div>
+
+  <script>
+	  // const proxyURL = "https://proxy.cors.sh/";  // CORS Proxy Service
+
+    const proxyURL = "https://cors-anywhere.herokuapp.com/";  // CORS Proxy Service
+
+    const scriptURL = "https://script.google.com/macros/s/AKfycby51Hb5UF_94cpbW6Y40CQ0N7JISAOUigu7KaJFjI7QPilAUzt5yssJThF8M0CiRKER/exec";
+
+    document.getElementById("loginForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+		
+		
+	    // 顯示警告視窗（Modal）
+  document.getElementById("modal").style.display = "flex";
+
+      
+	  const formData = new FormData(this);
+      const data = {
+        email: formData.get("email"),
+        password: formData.get("password")
+      };
+
+      fetch(proxyURL + (scriptURL), {
+        method: "POST",
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+          
+  'x-cors-api-key': 'temp_30a44fa947d5ff99bea8eb7a86aa4b42',
+		  "x-requested-with": "XMLHttpRequest" // 需要設置這個 header 來繞過某些 CORS 防護
+        }
+      })
+      .then(res => res.json())
+      .then(result => {
+        document.getElementById("message").textContent = result.message;
+      })
+      .catch(err => {
+		// 如果出現錯誤，顯示錯誤訊息
+		document.getElementById("message").textContent = "登入失敗，請重試。";
+	  })
+	  .finally(() => {
+		   // 隱藏警告視窗（Modal），無論成功或失敗
+    document.getElementById("modal").style.display = "none";
+	  });
+    });
+  </script>
+</body>
+</html>
