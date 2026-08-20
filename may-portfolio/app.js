@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s);const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-$('#heroVisual').innerHTML=`<img src="${WORKS[7].image}" alt="${esc(WORKS[7].title)}">`;
+$('#heroVisual').innerHTML=`<img src="https://images.pexels.com/photos/32780010/pexels-photo-32780010.jpeg?auto=compress&cs=tinysrgb&w=1600" alt="溫暖木質調居家空間">`;
 $('#featured').innerHTML=FEATURED.map(i=>{const w=WORKS[i];return `<a class="feature" href="${w.url}" target="_blank" rel="noopener"><img src="${w.image}" alt="${esc(w.title)}"><div class="feature-copy"><small>${esc(w.category)}</small><strong>${esc(w.title)}</strong></div></a>`}).join('');
 $('#bookGrid').innerHTML=BOOKS.map(b=>`<a class="book" href="${b.url}" target="_blank" rel="noopener"><div class="cover"><img src="${b.image}" alt="${esc(b.title)}" loading="lazy" referrerpolicy="no-referrer"></div><small>編輯作品</small><strong>${esc(b.title)}</strong></a>`).join('');
 const cats=['全部',...new Set(WORKS.map(w=>w.category))], filters=$('#filters'), list=$('#workList'), search=$('#search'), count=$('#count');let active='全部';
