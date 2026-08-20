@@ -1,4 +1,5 @@
 const $=s=>document.querySelector(s);const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+BOOKS.push({url:'https://www.books.com.tw/products/0010655039',image:'https://www.books.com.tw/img/001/065/50/0010655039.jpg',title:'造型兒童餐：88種超萌料理，讓孩子天天都想帶便當！'});
 $('#heroVisual').innerHTML=`<img src="https://images.pexels.com/photos/32780010/pexels-photo-32780010.jpeg?auto=compress&cs=tinysrgb&w=1600" alt="溫暖木質調居家空間">`;
 $('#featured').innerHTML=FEATURED.map(i=>{const w=WORKS[i];return `<a class="feature" href="${w.url}" target="_blank" rel="noopener"><img src="${w.image}" alt="${esc(w.title)}" onerror="this.style.display='none'"><div class="feature-copy"><small>${esc(w.category)}</small><strong>${esc(w.title)}</strong></div></a>`}).join('');
 $('#bookGrid').innerHTML=BOOKS.map(b=>`<a class="book" href="${b.url}" target="_blank" rel="noopener"><div class="cover"><img src="${b.image}" alt="${esc(b.title)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'"></div><small>編輯作品</small><strong>${esc(b.title)}</strong></a>`).join('');
