@@ -1,0 +1,66 @@
+name: Split May Portfolio Archive
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/split-may-archive.yml'
+
+jobs:
+  split:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Download original archive artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/actions/artifacts/9873221886/zip > original-artifact.zip
+          unzip original-artifact.zip
+          ls -lh
+
+      - name: Extract manifest
+        run: |
+          unzip -p may-portfolio-full-archive.zip manifest.json > manifest.json
+          unzip -p may-portfolio-full-archive.zip README.txt > README.txt
+
+      - name: Split full archive into 400 MiB parts
+        run: |
+          split -b 400M -d -a 2 may-portfolio-full-archive.zip may-portfolio-full-archive.zip.part-
+          ls -lh may-portfolio-full-archive.zip.part-*
+
+      - name: Upload manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: may-portfolio-archive-manifest
+          path: |
+            manifest.json
+            README.txt
+          retention-days: 90
+
+      - name: Upload part 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: may-portfolio-archive-part-01
+          path: may-portfolio-full-archive.zip.part-00
+          compression-level: 0
+          retention-days: 90
+
+      - name: Upload part 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: may-portfolio-archive-part-02
+          path: may-portfolio-full-archive.zip.part-01
+          compression-level: 0
+          retention-days: 90
+
+      - name: Upload part 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: may-portfolio-archive-part-03
+          path: may-portfolio-full-archive.zip.part-02
+          compression-level: 0
+          retention-days: 90
