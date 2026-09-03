@@ -1,0 +1,38 @@
+name: Build May Portfolio Archive
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'may-portfolio/archive/build_archive.py'
+      - '.github/workflows/may-portfolio-archive.yml'
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Build archive
+        run: python may-portfolio/archive/build_archive.py
+
+      - name: Upload archive ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: may-portfolio-full-archive
+          path: may-portfolio-full-archive.zip
+          if-no-files-found: error
+          retention-days: 90
