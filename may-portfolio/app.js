@@ -2,11 +2,11 @@ const $=s=>document.querySelector(s);const esc=s=>String(s).replace(/[&<>"]/g,m=
 BOOKS.push({url:'https://www.books.com.tw/products/0010655039',image:'https://www.books.com.tw/img/001/065/50/0010655039.jpg',title:'造型兒童餐：88種超萌料理，讓孩子天天都想帶便當！'});
 
 // Archive fallback：平常使用官網；官網失效時只要改成 true，31 篇作品會全部切到本站封存頁。
-const USE_ARCHIVE=false;
+const USE_ARCHIVE=true;
 // 測試用：網址加 ?archive=1 可預覽封存模式，不影響一般訪客。
 const FORCE_ARCHIVE=new URLSearchParams(location.search).get('archive')==='1';
 const ARCHIVE_MODE=USE_ARCHIVE||FORCE_ARCHIVE;
-WORKS.forEach((w,i)=>{w.officialUrl=w.url;w.archiveUrl=`detail.html?type=work&id=${i}`;});
+WORKS.forEach((w,i)=>{w.officialUrl=w.url;w.archiveUrl=`archive-static/pages/${String(i+1).padStart(2,'0')}.html`;});
 const workHref=w=>ARCHIVE_MODE?w.archiveUrl:w.officialUrl;
 const workAttrs=()=>ARCHIVE_MODE?'':'target="_blank" rel="noopener"';
 
