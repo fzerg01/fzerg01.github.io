@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/publish-may-static-archive.yml'
+      - 'may-portfolio/archive/publish_static_archive.py'
 
 permissions:
   contents: write
@@ -38,88 +39,7 @@ jobs:
           test -f _archive_src/manifest.json
 
       - name: Build public static archive
-        run: |
-          rm -rf may-portfolio/archive-static
-          mkdir -p may-portfolio/archive-static/pages may-portfolio/archive-static/files may-portfolio/archive-static/thumbs
-          cp _archive_src/manifest.json may-portfolio/archive-static/manifest.json
-          cp _archive_src/README.txt may-portfolio/archive-static/README.txt || true
-          cp _archive_src/thumbs/*.jpg may-portfolio/archive-static/thumbs/ || true
-
-          python - <<'PY'
-          import json, html, pathlib, shutil, subprocess, os
-          root = pathlib.Path('may-portfolio/archive-static')
-          src = pathlib.Path('_archive_src')
-          manifest = json.loads((src/'manifest.json').read_text(encoding='utf-8'))
-
-          # Compress PDFs for permanent web hosting while preserving selectable text.
-          for i, w in enumerate(manifest['works'], 1):
-              n=f'{i:02d}'
-              inp=src/'works'/f'{n}.pdf'
-              out=root/'files'/f'{n}.pdf'
-              if not inp.exists():
-                  raise SystemExit(f'Missing {inp}')
-              cmd=['gs','-sDEVICE=pdfwrite','-dCompatibilityLevel=1.4','-dPDFSETTINGS=/ebook',
-                   '-dNOPAUSE','-dQUIET','-dBATCH','-dDetectDuplicateImages=true',
-                   '-dDownsampleColorImages=true','-dColorImageResolution=150',
-                   '-dDownsampleGrayImages=true','-dGrayImageResolution=150',
-                   '-sOutputFile='+str(out),str(inp)]
-              subprocess.run(cmd, check=True)
-              if out.stat().st_size > 95*1024*1024:
-                  tmp=out.with_suffix('.small.pdf')
-                  cmd=['gs','-sDEVICE=pdfwrite','-dCompatibilityLevel=1.4','-dPDFSETTINGS=/screen',
-                       '-dNOPAUSE','-dQUIET','-dBATCH','-sOutputFile='+str(tmp),str(out)]
-                  subprocess.run(cmd, check=True)
-                  tmp.replace(out)
-              if out.stat().st_size > 99*1024*1024:
-                  raise SystemExit(f'PDF still exceeds GitHub single-file limit: {out}')
-
-          css='''
-          :root{--paper:#f3f0e9;--ink:#20231e;--muted:#73776f;--moss:#66705f;--line:#cbc9c0;--dark:#1d211c}
-          *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}a{color:inherit}
-          header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:15px 28px;background:rgba(243,240,233,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
-          .brand{text-decoration:none}.brand strong{display:block;font-family:"Noto Serif TC","PMingLiU",serif;font-size:18px}.brand span{font-size:9px;letter-spacing:.15em;color:var(--muted)}
-          main{width:min(1180px,calc(100% - 32px));margin:auto;padding:42px 0 80px}.meta{font-size:11px;letter-spacing:.12em;color:var(--moss)}h1{font:500 clamp(30px,5vw,58px)/1.25 "Noto Serif TC","PMingLiU",serif;margin:10px 0 16px}.note{color:var(--muted);font-size:13px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:24px 0}.btn{display:inline-block;padding:10px 14px;border:1px solid var(--ink);text-decoration:none;font-size:12px}.btn.dark{background:var(--dark);color:white}.viewer{height:78vh;min-height:620px;border:1px solid var(--line);background:#fff}.viewer iframe{width:100%;height:100%;border:0}.mobile-link{display:none}.archive-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:38px}.card{display:block;text-decoration:none;border-top:1px solid var(--line);padding-top:14px}.card img{width:100%;aspect-ratio:16/10;object-fit:cover;background:#ddd}.card small{display:block;color:var(--moss);margin-top:10px}.card strong{display:block;font-family:"Noto Serif TC","PMingLiU",serif;font-size:19px;line-height:1.45;margin-top:4px}@media(max-width:780px){header{padding:12px 16px}.archive-grid{grid-template-columns:1fr}.viewer{height:65vh;min-height:460px}.mobile-link{display:inline-block}}
-          '''
-          (root/'archive.css').write_text(css,encoding='utf-8')
-
-          cards=[]
-          for i,w in enumerate(manifest['works'],1):
-              n=f'{i:02d}'
-              title=html.escape(w['title'])
-              cat=html.escape(w['category'])
-              url=html.escape(w['url'],quote=True)
-              thumb=f'../thumbs/{n}.jpg'
-              page=f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}｜許雅眉 May 封存版</title><link rel="stylesheet" href="../archive.css"></head><body>
-<header><a class="brand" href="../../index.html"><strong>許雅眉 May</strong><span>ARCHIVED WORK</span></a><a href="../index.html">全部封存作品</a></header>
-<main><div class="meta">ARCHIVE · {n} · {cat}</div><h1>{title}</h1><p class="note">這是本站保存的完整頁面快照，全文與圖片已封存於本網站，不依賴幸福空間原站。</p><div class="actions"><a class="btn dark" href="../files/{n}.pdf" target="_blank">開啟完整封存 PDF</a><a class="btn" href="{url}" target="_blank" rel="noopener">查看原始來源 ↗</a><a class="btn" href="../../index.html#works">回作品集</a></div><div class="viewer"><iframe src="../files/{n}.pdf#view=FitH" title="{title}"></iframe></div><p class="note mobile-link">若手機沒有直接顯示 PDF，請點上方「開啟完整封存 PDF」。</p></main></body></html>'''
-              (root/'pages'/f'{n}.html').write_text(page,encoding='utf-8')
-              cards.append(f'<a class="card" href="pages/{n}.html"><img src="thumbs/{n}.jpg" alt=""><small>{n} · {cat}</small><strong>{title}</strong></a>')
-
-          idx=f'''<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>許雅眉 May｜完整作品封存</title><link rel="stylesheet" href="archive.css"></head><body><header><a class="brand" href="../index.html"><strong>許雅眉 May</strong><span>FULL ARCHIVE</span></a><a href="../index.html">回作品集</a></header><main><div class="meta">31 ONLINE WORKS · PERMANENT ARCHIVE</div><h1>完整作品封存</h1><p class="note">31 篇作品的全文與圖片已轉為本站保存的 PDF 快照。即使原始網站下線，這裡仍可閱讀。</p><section class="archive-grid">{''.join(cards)}</section></main></body></html>'''
-          (root/'index.html').write_text(idx,encoding='utf-8')
-
-          total=sum(p.stat().st_size for p in (root/'files').glob('*.pdf'))
-          print('PDF total MB:', round(total/1024/1024,1))
-          print('Max PDF MB:', round(max(p.stat().st_size for p in (root/'files').glob('*.pdf'))/1024/1024,1))
-          PY
-
-      - name: Make archive the default destination
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('may-portfolio/app.js')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace('const USE_ARCHIVE=false;','const USE_ARCHIVE=true;')
-          s=s.replace("w.archiveUrl=`detail.html?type=work&id=${i}`;","w.archiveUrl=`archive-static/pages/${String(i+1).padStart(2,'0')}.html`;")
-          p.write_text(s,encoding='utf-8')
-
-          p=Path('may-portfolio/index.html')
-          s=p.read_text(encoding='utf-8')
-          import re
-          s=re.sub(r'data\.js\?v=[^\"]+', 'data.js?v=20260916-archive', s)
-          s=re.sub(r'app\.js\?v=[^\"]+', 'app.js?v=20260916-archive', s)
-          p.write_text(s,encoding='utf-8')
-          PY
+        run: python may-portfolio/archive/publish_static_archive.py
 
       - name: Commit permanent archive
         run: |
