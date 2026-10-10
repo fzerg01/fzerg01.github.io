@@ -1,50 +1,65 @@
 name: Publish May Static Archive
 
 on:
-  workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/publish-may-static-archive.yml'
-      - 'may-portfolio/archive/publish_static_archive.py'
+  workflow_call:
+    inputs:
+      artifact_id:
+        required: true
+        type: string
+      archive_sha256:
+        required: true
+        type: string
+      metadata_sha256:
+        required: true
+        type: string
+      source_attempt:
+        required: true
+        type: string
 
 permissions:
-  contents: write
-
-env:
-  SOURCE_ARTIFACT_ID: '9873221886'
+  contents: read
+  actions: read
 
 jobs:
-  publish:
+  process:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
+      - name: Checkout source commit
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-
-      - name: Install tools
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download exact artifact from this run
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.artifact_id }}
+          path: _incoming
+      - name: Verify source and complete payload
+        env:
+          EXPECTED_ARCHIVE_SHA256: ${{ inputs.archive_sha256 }}
+          EXPECTED_METADATA_SHA256: ${{ inputs.metadata_sha256 }}
+          SOURCE_ATTEMPT: ${{ inputs.source_attempt }}
+        run: |
+          mv _incoming/may-portfolio-full-archive.zip .
+          mv _incoming/archive-integrity.json .
+          python may-portfolio/archive/archive_integrity.py verify
+      - name: Install Ghostscript
         run: |
           sudo apt-get update
-          sudo apt-get install -y ghostscript unzip
-
-      - name: Download full archive artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
+          sudo apt-get install -y ghostscript
+      - name: Build verified static archive for review
         run: |
-          gh api repos/${{ github.repository }}/actions/artifacts/${SOURCE_ARTIFACT_ID}/zip > original-artifact.zip
-          unzip -q original-artifact.zip
-          mkdir -p _archive_src
-          unzip -q may-portfolio-full-archive.zip -d _archive_src
-          test -f _archive_src/manifest.json
-
-      - name: Build public static archive
-        run: python may-portfolio/archive/publish_static_archive.py
-
-      - name: Commit permanent archive
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add may-portfolio/archive-static may-portfolio/app.js may-portfolio/index.html
-          git commit -m 'Publish permanent full-text May portfolio archive'
-          git push origin main
+          python may-portfolio/archive/publish_static_archive.py
+          mkdir -p _review/may-portfolio
+          cp -a may-portfolio/archive-static _review/may-portfolio/
+          cp may-portfolio/app.js may-portfolio/index.html _review/may-portfolio/
+          cp archive-integrity.json _review/
+          (cd _review && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS)
+      - name: Upload review bundle (no repository write)
+        uses: actions/upload-artifact@v4
+        with:
+          name: may-portfolio-static-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: _review/
+          if-no-files-found: error
+          retention-days: 90

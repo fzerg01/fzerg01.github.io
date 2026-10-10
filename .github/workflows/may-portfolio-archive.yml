@@ -3,17 +3,34 @@ name: Build May Portfolio Archive
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - 'may-portfolio/archive/build_archive.py'
-      - '.github/workflows/may-portfolio-archive.yml'
+      - '.github/workflows/*.yml'
+      - 'may-portfolio/archive/archive_integrity.py'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: may-archive-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   archive:
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+      archive_sha256: ${{ steps.seal.outputs.archive_sha256 }}
+      metadata_sha256: ${{ steps.seal.outputs.metadata_sha256 }}
+      source_attempt: ${{ steps.seal.outputs.source_attempt }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,10 +46,35 @@ jobs:
       - name: Build archive
         run: python may-portfolio/archive/build_archive.py
 
+      - name: Validate and seal archive
+        id: seal
+        run: python may-portfolio/archive/archive_integrity.py seal
+
       - name: Upload archive ZIP
+        id: upload
         uses: actions/upload-artifact@v4
         with:
-          name: may-portfolio-full-archive
-          path: may-portfolio-full-archive.zip
+          name: may-portfolio-full-archive-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            may-portfolio-full-archive.zip
+            archive-integrity.json
           if-no-files-found: error
           retention-days: 90
+
+  split:
+    needs: archive
+    uses: ./.github/workflows/split-may-archive.yml
+    with:
+      artifact_id: ${{ needs.archive.outputs.artifact_id }}
+      archive_sha256: ${{ needs.archive.outputs.archive_sha256 }}
+      metadata_sha256: ${{ needs.archive.outputs.metadata_sha256 }}
+      source_attempt: ${{ needs.archive.outputs.source_attempt }}
+
+  publish:
+    needs: archive
+    uses: ./.github/workflows/publish-may-static-archive.yml
+    with:
+      artifact_id: ${{ needs.archive.outputs.artifact_id }}
+      archive_sha256: ${{ needs.archive.outputs.archive_sha256 }}
+      metadata_sha256: ${{ needs.archive.outputs.metadata_sha256 }}
+      source_attempt: ${{ needs.archive.outputs.source_attempt }}
