@@ -1,66 +1,62 @@
 name: Split May Portfolio Archive
 
 on:
-  workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/split-may-archive.yml'
+  workflow_call:
+    inputs:
+      artifact_id:
+        required: true
+        type: string
+      archive_sha256:
+        required: true
+        type: string
+      metadata_sha256:
+        required: true
+        type: string
+      source_attempt:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
-  split:
+  process:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      actions: read
-      contents: read
+    timeout-minutes: 30
     steps:
-      - name: Download original archive artifact
+      - name: Checkout source commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download exact artifact from this run
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.artifact_id }}
+          path: _incoming
+      - name: Verify source and complete payload
         env:
-          GH_TOKEN: ${{ github.token }}
+          EXPECTED_ARCHIVE_SHA256: ${{ inputs.archive_sha256 }}
+          EXPECTED_METADATA_SHA256: ${{ inputs.metadata_sha256 }}
+          SOURCE_ATTEMPT: ${{ inputs.source_attempt }}
         run: |
-          gh api repos/${{ github.repository }}/actions/artifacts/9873221886/zip > original-artifact.zip
-          unzip original-artifact.zip
-          ls -lh
-
-      - name: Extract manifest
+          mv _incoming/may-portfolio-full-archive.zip .
+          mv _incoming/archive-integrity.json .
+          python may-portfolio/archive/archive_integrity.py verify
+      - name: Split and verify reassembled bytes
         run: |
-          unzip -p may-portfolio-full-archive.zip manifest.json > manifest.json
-          unzip -p may-portfolio-full-archive.zip README.txt > README.txt
-
-      - name: Split full archive into 400 MiB parts
-        run: |
-          split -b 400M -d -a 2 may-portfolio-full-archive.zip may-portfolio-full-archive.zip.part-
-          ls -lh may-portfolio-full-archive.zip.part-*
-
-      - name: Upload manifest
+          mkdir _parts
+          split -b 400M -d -a 4 may-portfolio-full-archive.zip _parts/may-portfolio-full-archive.zip.part-
+          cat _parts/may-portfolio-full-archive.zip.part-* > _reassembled.zip
+          cmp may-portfolio-full-archive.zip _reassembled.zip
+          cp archive-integrity.json _archive_src/manifest.json _archive_src/README.txt _parts/
+          (cd _parts && sha256sum may-portfolio-full-archive.zip.part-* > SHA256SUMS)
+      - name: Upload all parts and verification metadata
         uses: actions/upload-artifact@v4
         with:
-          name: may-portfolio-archive-manifest
-          path: |
-            manifest.json
-            README.txt
-          retention-days: 90
-
-      - name: Upload part 1
-        uses: actions/upload-artifact@v4
-        with:
-          name: may-portfolio-archive-part-01
-          path: may-portfolio-full-archive.zip.part-00
-          compression-level: 0
-          retention-days: 90
-
-      - name: Upload part 2
-        uses: actions/upload-artifact@v4
-        with:
-          name: may-portfolio-archive-part-02
-          path: may-portfolio-full-archive.zip.part-01
-          compression-level: 0
-          retention-days: 90
-
-      - name: Upload part 3
-        uses: actions/upload-artifact@v4
-        with:
-          name: may-portfolio-archive-part-03
-          path: may-portfolio-full-archive.zip.part-02
+          name: may-portfolio-parts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: _parts/
+          if-no-files-found: error
           compression-level: 0
           retention-days: 90
